@@ -9,7 +9,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-#include "quadrino_gps_registers.h"
+#include "registers.h"
 
 typedef struct {
     GPS_COORDINATES location;

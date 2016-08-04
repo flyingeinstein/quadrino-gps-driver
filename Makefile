@@ -1,8 +1,8 @@
 ifneq ($(KERNELRELEASE),)
-#	obj-m := sysfs.o gps-quadrino.o
-	obj-m := gps-quadrino.o
+#	obj-m := sysfs.o gps_quadrino.o
+	obj-m := gps_quadrino.o
 else
-	MODULE_NAME=gps-quadrino
+	MODULE_NAME=gps_quadrino
 	KERNEL_DIR ?= $(HOME)/src/linux
 	MODULE_INSTALL_PATH?=/lib/modules/`uname -r`/kernel/drivers/gps
 all:
