@@ -1,0 +1,23 @@
+menuconfig GPS
+	bool "GPS peripheral support"
+	help
+      GPS add-on support via I2C.
+
+if GPS
+
+config GPS_SYSFS
+	bool "Common sysfs filesystem for GPS devices"
+	default y if SYSFS
+
+config GPS_QUADRINO
+	tristate "Quadrino GPS"
+	depends on PWM_SYSFS && I2C && GPS_SYSFS
+	select REGMAP_I2C
+	help
+      Quadrino GPS from Flying Einstein.
+      should depend on OF (open firmware) as well.
+
+	  To compile this driver as a module, choose M here: the module
+	  will be called gps-quadrino.
+
+endif
