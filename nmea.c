@@ -1,13 +1,18 @@
 
 #include "nmea.h"
 
+#if !defined(__KERNEL__)
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
 #include <memory.h>
+#else
+#include <linux/kernel.h>
+#include <linux/module.h>
+#endif
 
 
-int nmea_checksum(char* nmea_sentence)
+int nmea_checksum(char* nmea_sentence, int* output_length, int add_lf)
 {
     // see this page for reference on computing nmea checksums
     // https://rietman.wordpress.com/2008/09/25/how-to-calculate-the-nmea-checksum/
@@ -17,7 +22,9 @@ int nmea_checksum(char* nmea_sentence)
     while(*p)
         checksum ^= *p++;
     *p++ = '*';
-    sprintf(p, "%02x", checksum);
+    p += sprintf(p, add_lf ? "%02x\n" : "%02x", checksum);
+    if(output_length !=NULL)
+        *output_length = p-nmea_sentence;
     return checksum;
 }
 
@@ -25,7 +32,6 @@ int nmea_checksum(char* nmea_sentence)
 int nmea_gga(char* sout, int sout_length, STATUS_REGISTER* status, GPS_COORDINATES* location, GPS_DETAIL* detail)
 {
     // will need to parse datetime components for NMEA display
-    double dow;   // computed day of week
     uint32_t tod; // computed time of day
     uint32_t date, time; // computed days since 1970, and 1/100th seconds since midnight
     time_t datetime;  // seconds since 1970
@@ -41,8 +47,7 @@ int nmea_gga(char* sout, int sout_length, STATUS_REGISTER* status, GPS_COORDINAT
     int32_t lat_dec, lon_dec;
 
     // parse the gps week number and tow into date/time
-    dow = detail->time/8640000;
-    tod = detail->time - (uint32_t)dow;
+    tod = detail->time - detail->time/8640000;
     date = detail->week*52 + detail->time/8640000;
     time = detail->time%8640000;
     datetime = detail->week*52 + detail->time/100;
@@ -64,14 +69,12 @@ int nmea_gga(char* sout, int sout_length, STATUS_REGISTER* status, GPS_COORDINAT
     lat_deg = abs(location->lat / 10000000);
     lon_deg = abs(location->lon / 10000000);
 
-    lat_frak = (uint32_t)((location->lat % 10000000) * 0.6);
-    lon_frak = (uint32_t)((location->lon % 10000000) * 0.6);
+    lat_frak = (location->lat % 10000000) * 100 / 60;
+    lon_frak = (location->lon % 10000000) * 100 / 60;
     lat_min = abs(lat_frak  / 100000);
     lon_min = abs(lon_frak  / 100000);
     lat_dec = abs(lat_frak % 100000);
     lon_dec = abs(lon_frak % 100000);
-
-    double geoid_height = 0.0;
 
 /* $GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
 
@@ -107,9 +110,9 @@ int nmea_gga(char* sout, int sout_length, STATUS_REGISTER* status, GPS_COORDINAT
                           "%d%02d.%06d,%c,"      // lat
                           "%d%02d.%06d,%c,"      // lon
                           "%d,%d,"               // fix + sats
-                          "%2.1f,"               // hdop
-                          "%2.1f,M,"             // altitude + unit
-                          "%2.1f,M,"             // height of geoid + unit
+                          "0.9,"               // hdop
+                          "%d.0,M,"             // altitude + unit
+                          "0.0,M,"             // height of geoid + unit
                           ",,",               // 2x empty fields plus checksum
                   broken.tm_hour,broken.tm_min, broken.tm_sec,
                   lat_deg, lat_min, lat_dec, (location->lat<0) ? 'S':'N',
@@ -120,11 +123,12 @@ int nmea_gga(char* sout, int sout_length, STATUS_REGISTER* status, GPS_COORDINAT
                     ? 1
                     : 0,
                   status->numsats,
-                  0.9,
-                  (double)detail->altitude,
-                  geoid_height
+                  detail->altitude
     );
-    nmea_checksum(sout);
+
+    // add checksum
+    len = sizeof(sout);
+    nmea_checksum(sout, &len, 1);
 
     return len;
 }

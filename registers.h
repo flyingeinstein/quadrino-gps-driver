@@ -1,8 +1,16 @@
 #ifndef __QUADRINO_GPS_REGISTERS_H
 #define __QUADRINO_GPS_REGISTERS_H
 
+#if !defined( __KERNEL__ )
 #include <stdint.h>
-
+#else
+#include <linux/types.h>
+typedef u8  uint8_t;
+typedef s16 int16_t;
+typedef __u16 uint16_t;
+typedef s32 int32_t;
+typedef __u32 uint32_t;
+#endif
 
 typedef struct {
   uint8_t    new_data:1;

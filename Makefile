@@ -1,6 +1,7 @@
 ifneq ($(KERNELRELEASE),)
 #	obj-m := sysfs.o gps_quadrino.o
 	obj-m := gps_quadrino.o
+	gps_quadrino-objs := gps-quadrino.o nmea.o
 else
 	MODULE_NAME=gps_quadrino
 	KERNEL_DIR ?= $(HOME)/src/linux

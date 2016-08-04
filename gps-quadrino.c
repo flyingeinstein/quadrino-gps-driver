@@ -22,7 +22,7 @@
 
 #define DEBUG 1
 
-#include "registers.h"
+#include "nmea.h"
 
 /*
  * Version Information
@@ -55,7 +55,10 @@ static DECLARE_DELAYED_WORK(quadrino_gps_wq, quadrino_gps_read_worker);
 
 static void quadrino_gps_read_worker(struct work_struct *private)
 {
-   STATUS_REGISTER gps_status;
+   STATUS_REGISTER status;
+   GPS_COORDINATES location; 
+   GPS_DETAIL detail;
+
    char sout[256];
    s32 gps_buf_size, buf_size = 0;
 
@@ -65,49 +68,7 @@ static void quadrino_gps_read_worker(struct work_struct *private)
    /* check if driver was removed */
    if (!quadrino_gps_i2c_client)
        return;
-#if 0
-   gps_buf_size = i2c_smbus_read_word_data(quadrino_gps_i2c_client, 0xfd);
-   if (gps_buf_size < 0) {
-       dev_warn(&quadrino_gps_i2c_client->dev, KBUILD_MODNAME ": couldn't read register(0xfd) from GPS.\n");
-       /* try one more time */
-       goto end;
-   }
 
-   /* 0xfd is the MSB and 0xfe is the LSB */
-   gps_buf_size = ((gps_buf_size & 0xf) << 8) | ((gps_buf_size & 0xf0) >> 8);
-
-   if (gps_buf_size > 0) {
-
-       buf = kcalloc(gps_buf_size, sizeof(*buf), GFP_KERNEL);
-       if (!buf) {
-           dev_warn(&quadrino_gps_i2c_client->dev, KBUILD_MODNAME ": couldn't allocate memory.\n");
-           /* try one more time */
-           goto end;
-       }
-
-       do {
-           buf_size = i2c_master_recv(quadrino_gps_i2c_client, (char *)buf, gps_buf_size);
-           if (buf_size < 0) {
-               dev_warn(&quadrino_gps_i2c_client->dev, KBUILD_MODNAME ": couldn't read data from GPS.\n");
-               kfree(buf);
-               /* try one more time */
-               goto end;
-           }
-
-           tty_insert_flip_string(quadrino_gps_tty_port, buf, buf_size);
-
-           gps_buf_size -= buf_size;
-
-           /* There is a small chance that we need to split the data over
-              several buffers. If this is the case we must loop */
-       } while (unlikely(gps_buf_size > 0));
-
-       tty_flip_buffer_push(quadrino_gps_tty_port);
-
-       kfree(buf);
-   }
-#else
-#if 1
    // read gps status
    gps_buf_size = i2c_smbus_read_word_data(quadrino_gps_i2c_client, I2C_GPS_STATUS_00);
    if (gps_buf_size < 0) {
@@ -115,82 +76,34 @@ static void quadrino_gps_read_worker(struct work_struct *private)
        /* try one more time */
        goto end;
    }
-   gps_status = *(STATUS_REGISTER*)&gps_buf_size;   // alias the return value as gps status
+   status = *(STATUS_REGISTER*)&gps_buf_size;   // alias the return value as gps status
 
-   // output the GPS status
-   buf_size = sprintf(sout, "$GPV,%s,%d\n", 
-           gps_status.gps3dfix 
-               ? "3D"
-               : gps_status.gps2dfix 
-                   ? "2D"
-                   : "NO-FIX",
-           gps_status.numsats);
-    tty_insert_flip_string(quadrino_gps_tty_port, sout, buf_size);
-
-    // only output GPS location if we have at least a 2D fix
-    if(gps_status.gps2dfix) {
-       GPS_COORDINATES loc; 
-       GPS_DETAIL gps_detail;
-
-       // will need to parse datetime components for NMEA display
-       double dow;   // computed day of week
-       uint32_t tod; // computed time of day
-       uint32_t date, time; // computed days since 1970, and 1/100th seconds since midnight
-       int day, month, year, hour, min, sec;
-
-       // must use fixed point techniques to display lat/lon because kernel drivers shouldnt use floating point
-       int32_t latp, lats;
-       int32_t lonp, lons;
- 
+   if(status.gps2dfix || status.gps3dfix) {
        // read the current time from the device 
-       gps_buf_size = i2c_smbus_read_i2c_block_data(quadrino_gps_i2c_client, I2C_GPS_GROUND_SPEED, sizeof(GPS_DETAIL), (u8*)&gps_detail);
+       gps_buf_size = i2c_smbus_read_i2c_block_data(quadrino_gps_i2c_client, I2C_GPS_GROUND_SPEED, sizeof(GPS_DETAIL), (u8*)&detail);
        if (gps_buf_size < 0) {
            dev_warn(&quadrino_gps_i2c_client->dev, KBUILD_MODNAME ": couldn't read gps detail from GPS.\n");
            goto end;
        }
 
-      gps_buf_size = i2c_smbus_read_i2c_block_data(quadrino_gps_i2c_client, I2C_GPS_LOCATION, 8, (u8*)&loc);
+       gps_buf_size = i2c_smbus_read_i2c_block_data(quadrino_gps_i2c_client, I2C_GPS_LOCATION, 8, (u8*)&location);
        if (gps_buf_size < 0) {
            dev_warn(&quadrino_gps_i2c_client->dev, KBUILD_MODNAME ": couldn't read location from GPS.\n");
            goto end;
        }
+   } else {
+       // no fix
+       memset(&detail, 0, sizeof(detail));
+       memset(&location, 0, sizeof(location));
+   }
 
-       // parse the gps week number and tow into date/time
-       dow = gps_detail.time/8640000;
-       tod = gps_detail.time - dow;
-       date = gps_detail.week*52 + gps_detail.time/8640000;
-       time = gps_detail.time%8640000;
 
-       // now get components of date and time since we have to print in NMEA format
-       year = 1970 + (date/365);
-       month = (date % 365) / 30;
-       day = (date %30);
-       hour = time / 360000;
-       min = (time / 6000) % 60;
-       sec = (time / 100) % 60;
-
-       // get the integer and decimal portion of the lat/lon as seperate ints
-       latp = loc.lat/10000000;
-       lonp = loc.lon/10000000;
-       lats = abs(loc.lat%10000000);
-       lons = abs(loc.lon%10000000);
-
-       // output the GPS location
-       // GPGGA,time,lat,N,lon,E,fix,sats,hdop,alt,M,height_geod,M,,*chksum
-       buf_size = sprintf(sout, "$GPGGA," "%02d%02d%02d" "%d.%d,%d.%d\n", 
-               hour,min,sec,
-               latp, lats, lonp, lons);
+   // format and output nmea GPGGA sentence
+   buf_size = nmea_gga(sout, sizeof(sout), &status, &location, &detail);
+   if(buf_size >0) { 
        tty_insert_flip_string(quadrino_gps_tty_port, sout, buf_size);
-    }
-
-
-    tty_flip_buffer_push(quadrino_gps_tty_port);
-#else
-    buf_size = sprintf(sout, "$GPV,test,n/a\n");
-    tty_insert_flip_string(quadrino_gps_tty_port, sout, buf_size);
-    tty_flip_buffer_push(quadrino_gps_tty_port);
-#endif
-#endif
+       tty_flip_buffer_push(quadrino_gps_tty_port);
+   }
 end:
    /* resubmit the workqueue again */
    schedule_delayed_work(&quadrino_gps_wq, msecs_to_jiffies(READ_TIME)); /* 1 sec delay */
