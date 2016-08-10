@@ -148,8 +148,8 @@ int nmea_gga(char* sout, int sout_length, STATUS_REGISTER* status, GPS_COORDINAT
                           "0.0,M,"             // height of geoid + unit
                           ",,",               // 2x empty fields plus checksum
                   hour, min, sec,
-                  abs(dms_lat.degrees), dms_lat.minutes, dms_lat.fraction, (location->lat<0) ? 'S':'N',
-                  abs(dms_lon.degrees), dms_lon.minutes, dms_lon.fraction, (location->lon<0) ? 'W':'E',
+                  (int)abs(dms_lat.degrees), dms_lat.minutes, dms_lat.fraction, (location->lat<0) ? 'S':'N',
+                  (int)abs(dms_lon.degrees), dms_lon.minutes, dms_lon.fraction, (location->lon<0) ? 'W':'E',
                   status->gps3dfix
                   ? 2
                   : status->gps2dfix
