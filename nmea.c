@@ -52,10 +52,12 @@ void degrees2dms(long micro_degrees, geodms* geo)
      */
 
     // ex. 1234567890
-    int  degrees = micro_degrees / 10000000L ;      // degrees = 123
+    long milli_minutes;
+    int degrees, minutes;
+    degrees = micro_degrees / 10000000L ;      // degrees = 123
     micro_degrees -= 10000000L * degrees ;          // micro_degrees = 4567890
-    long  milli_minutes = micro_degrees * 3 / 5 ; // miili_minutes = 2740734    or *3/5 (and then by 10000 to get minutes)
-    int minutes = milli_minutes / 100000 ;           // minutes = 27
+    milli_minutes = micro_degrees * 3 / 5 ; // miili_minutes = 2740734    or *3/5 (and then by 10000 to get minutes)
+    minutes = milli_minutes / 100000 ;           // minutes = 27
     milli_minutes -= 100000L * minutes ;             // milli_minutes = 407
     geo->degrees = degrees;
     geo->minutes = abs(minutes);
@@ -66,12 +68,13 @@ void degrees2dms(long micro_degrees, geodms* geo)
 int nmea_gga(char* sout, int sout_length, STATUS_REGISTER* status, GPS_COORDINATES* location, GPS_DETAIL* detail)
 {
     // will need to parse datetime components for NMEA display
-    uint32_t tod; // computed time of day
-    uint32_t date, time; // computed days since 1970, and 1/100th seconds since midnight
-    time_t datetime;  // seconds since 1970
-    struct timeval tv;
-    struct tm broken;
-    int day, month, year, hour, min, sec;
+    //uint32_t date, time; // computed days since 1970, and 1/100th seconds since midnight
+    //time_t datetime;  // seconds since 1970
+    //struct timeval tv;
+    //struct tm broken;
+    //int day, month, year;
+    uint32_t tod, time;
+    int hour, min, sec;
     int len;
     geodms dms_lat, dms_lon;
 
