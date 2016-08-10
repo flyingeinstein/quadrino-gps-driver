@@ -68,19 +68,28 @@ void main()
 
     // check our nmea checksum calculator
     strcpy(sout, "$GPGLL,5300.97914,N,00259.98174,E,125926,A");
-    if(0x28 != nmea_checksum(sout)) {
+    if(0x28 != nmea_checksum(sout,NULL,0)) {
         printf("FAILED   CHECKSUM  28 != %s\n", sout);
     }
     strcpy(sout, "$GPGGA,123519,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,");
-    if(0x47 != nmea_checksum(sout)) {
+    if(0x47 != nmea_checksum(sout,NULL,0)) {
         printf("FAILED   CHECKSUM  47 != %s\n", sout);
     }
+
+
+    geodms dms;
+    degrees2dms(1234567890, &dms);
+    printf("micro-degrees to DD° MM.SS => %d %d.%d\n    ", dms.degrees, dms.minutes, dms.fraction);
+    if(dms.degrees !=123) printf("DEG!=%d  ", 123);
+    if(dms.minutes !=27) printf("MIN!=%d  ", 27);
+    if(dms.fraction !=40734) printf("FRAK!=%d  ", 40734);
+    printf("\n");
 
     // output sample GPGAA sentences
     gpsdata* pdata = sample; 
     while(pdata->location.lat!=0) {
         nmea_gga(sout, sizeof(sout), &pdata->status, &pdata->location, &pdata->detail);
-        printf("%s\n", sout);
+        printf("%s", sout);
         pdata++;
     }
 }
