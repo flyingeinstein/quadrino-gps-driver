@@ -62,7 +62,7 @@ void time_to_tm(time_t totalsecs, int offset, struct tm *result)
 }
 
 
-void main()
+int main()
 {
     char sout[512];
 
@@ -92,5 +92,7 @@ void main()
         printf("%s", sout);
         pdata++;
     }
+
+    return 0;
 }
 
