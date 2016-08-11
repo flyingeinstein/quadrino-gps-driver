@@ -88,6 +88,8 @@ int main()
     // output sample GPGAA sentences
     gpsdata* pdata = sample; 
     while(pdata->location.lat!=0) {
+        nmea_zda(sout, sizeof(sout), &pdata->detail);
+        printf("%s", sout);
         nmea_gga(sout, sizeof(sout), &pdata->status, &pdata->location, &pdata->detail);
         printf("%s", sout);
         pdata++;

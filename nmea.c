@@ -11,6 +11,8 @@
 #include <linux/module.h>
 #endif
 
+void time_to_tm(time_t totalsecs, int offset, struct tm *result);
+
 
 int nmea_checksum(char* nmea_sentence, int* output_length, int add_lf)
 {
@@ -29,7 +31,7 @@ int nmea_checksum(char* nmea_sentence, int* output_length, int add_lf)
 }
 
 
-void degrees2dms(long micro_degrees, geodms* geo)
+void degrees2dms(int micro_degrees, geodms* geo)
 {
     /* Must use fixed point techniques to display lat/lon because kernel
      * drivers shouldnt use floating point.
@@ -52,55 +54,96 @@ void degrees2dms(long micro_degrees, geodms* geo)
      */
 
     // ex. 1234567890
-    long milli_minutes;
+    int milli_minutes;
     int degrees, minutes;
-    degrees = micro_degrees / 10000000L ;      // degrees = 123
-    micro_degrees -= 10000000L * degrees ;          // micro_degrees = 4567890
+    degrees = micro_degrees / 10000000 ;      // degrees = 123
+    micro_degrees -= 10000000 * degrees ;          // micro_degrees = 4567890
     milli_minutes = micro_degrees * 3 / 5 ; // miili_minutes = 2740734    or *3/5 (and then by 10000 to get minutes)
     minutes = milli_minutes / 100000 ;           // minutes = 27
     milli_minutes -= 100000L * minutes ;             // milli_minutes = 407
-    geo->degrees = degrees;
-    geo->minutes = abs(minutes);
+    geo->degrees = (int16_t)degrees;
+    geo->minutes = (int16_t)abs(minutes);
     geo->fraction = abs(milli_minutes);
 }
 
-
-int nmea_gga(char* sout, int sout_length, STATUS_REGISTER* status, GPS_COORDINATES* location, GPS_DETAIL* detail)
+int gps_time2tm(GPS_DETAIL* detail, struct tm* broken)
 {
-    // will need to parse datetime components for NMEA display
-    //uint32_t date, time; // computed days since 1970, and 1/100th seconds since midnight
-    //time_t datetime;  // seconds since 1970
-    //struct timeval tv;
-    //struct tm broken;
-    //int day, month, year;
-    uint32_t tod, time;
-    int hour, min, sec;
-    int len;
-    geodms dms_lat, dms_lon;
+    time_t datetime;
+    struct timeval tv;
 
-#if 0
     // parse the gps week number and tow into date/time
-    // TODO: This doesnt work yet because Jan 1, 1970 fell on a Thursday not a Sunday!
-    date = detail->week*52 + detail->time/8640000;
-    time = detail->time%8640000;
-    datetime = (time_t)detail->week*52 + (time_t)detail->time/100;
+    datetime = 3657*86400+   // to start, there are 3657 days between linux epoch and gps epoch (Jan1,1970 and Jan6,1980)
+               (time_t)detail->week*(7*86400) + (time_t)detail->time/100;
 
     // convert to human readable components
     tv.tv_sec = datetime;
     tv.tv_usec = 0;
-    time_to_tm(tv.tv_sec, 0, &broken);
+    //memset(&broken, 0, sizeof(broken));
+    time_to_tm(tv.tv_sec, 0, broken);
+    return 0;
+}
 
-    // now get components of date and time since we have to print in NMEA format
-    year = 1970 + (date/365);
-    month = (date % 365) / 30;
-    day = (date %30);
+int nmea_zda(char* sout, int sout_length, GPS_DETAIL* detail)
+{
+    struct tm broken;
+    int len;
+
+    if((len=gps_time2tm(detail, &broken))!=0)
+        return len;
+
+    // broken components are somewhat relative to constants, lets adjust it
+    broken.tm_mon++;
+    broken.tm_year += 1900;
+
+    /*
+     * GPZDA  Date & Time
+     *
+     *   UTC, day, month, year, and local time zone.
+     *
+     *   $--ZDA,hhmmss.ss,xx,xx,xxxx,xx,xx
+     *   hhmmss.ss = UTC
+     *   xx = Day, 01 to 31
+     *   xx = Month, 01 to 12
+     *   xxxx = Year
+     *   xx = Local zone description, 00 to +/- 13 hours
+     *   xx = Local zone minutes description (keep same sign as hours)
+     */
+    len = sprintf(sout, "$GPZDA,"
+            "%02d%02d%02d.%d,"        // time
+            "%d,%d,%4d,"      // day, month, year
+            "00,00",               // TZ hours,minutes
+            broken.tm_hour, broken.tm_min, broken.tm_sec,
+            detail->time %100,  // milliseconds
+            broken.tm_mday, broken.tm_mon, broken.tm_year
+    );
+
+    // add checksum
+    len = sizeof(sout);
+    nmea_checksum(sout, &len, 1);
+
+    return len;
+
+}
+
+int nmea_gga(char* sout, int sout_length, STATUS_REGISTER* status, GPS_COORDINATES* location, GPS_DETAIL* detail)
+{
+    struct tm broken;
+    int len;
+    geodms dms_lat, dms_lon;
+
+#if 1
+    // will need to parse datetime components for NMEA display
+    if((len=gps_time2tm(detail, &broken))!=0)
+        return len;
 #else
+    uint32_t tod, time;
+
     time = detail->time%8640000;
-    hour = time / 360000;
+    broken.tm_hour = time / 360000;
     tod = time - hour*360000;
-    min = (tod / 6000);
+    broken.tm_min = (tod / 6000);
     tod -= min*6000;
-    sec = (tod / 100);
+    broken.tm_sec = (tod / 100);
 #endif
 
     degrees2dms(location->lat, &dms_lat);
@@ -147,7 +190,7 @@ int nmea_gga(char* sout, int sout_length, STATUS_REGISTER* status, GPS_COORDINAT
                           "%d.0,M,"             // altitude + unit
                           "0.0,M,"             // height of geoid + unit
                           ",,",               // 2x empty fields plus checksum
-                  hour, min, sec,
+                  broken.tm_hour, broken.tm_min, broken.tm_sec,
                   (int)abs(dms_lat.degrees), dms_lat.minutes, dms_lat.fraction, (location->lat<0) ? 'S':'N',
                   (int)abs(dms_lon.degrees), dms_lon.minutes, dms_lon.fraction, (location->lon<0) ? 'W':'E',
                   status->gps3dfix

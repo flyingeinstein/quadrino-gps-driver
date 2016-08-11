@@ -27,7 +27,7 @@ int nmea_checksum(char* nmea_sentence, int* output_length, int add_lf);
 /// our decimal degrees into these components using fixed-point math only. (Kernel drivers shouldnt use floating point processor)
 /// \param degrees The decimal degrees as a fixed-point value of degrees*10e7, Ex. 1234567890 is 123.456789 degrees.
 /// \param geo Holds the resulting components when degrees is converted to integer degrees, minutes and fractional minutes (DD MM.mmmmm)
-void degrees2dms(long degrees, geodms* geo);
+void degrees2dms(int degrees, geodms* geo);
 
 /// \brief Formats a NMEA GPGGA sentence from GPS sensor data.
 /// \param sout The output buffer that will receive the NMEA sentence
@@ -36,6 +36,12 @@ void degrees2dms(long degrees, geodms* geo);
 /// \param location The lat/lon registers from the GPS sensor data
 /// \param detail The speed, altitude, course and date/time registers from the GPS sensor data
 int nmea_gga(char* sout, int sout_length, STATUS_REGISTER* status, GPS_COORDINATES* location, GPS_DETAIL* detail);
+
+/// \brief Formats a NMEA GPZDA sentence providing UTC date and time.
+/// \param sout The output buffer that will receive the NMEA sentence
+/// \param sout_length The capacity of the output buffer for safety, typically use strlen(sout) when calling this function.
+/// \param detail The speed, altitude, course and date/time registers from the GPS sensor data
+int nmea_zda(char* sout, int sout_length, GPS_DETAIL* detail);
 
 
 #endif // __QUADRINO_GPS_NMEA_H
