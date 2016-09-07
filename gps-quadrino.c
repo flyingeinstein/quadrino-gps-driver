@@ -98,6 +98,11 @@ static void quadrino_gps_read_worker(struct work_struct *private)
    }
 
 
+   buf_size = nmea_zda(sout, sizeof(sout), &detail);
+   if(buf_size >0) {
+      tty_insert_flip_string(quadrino_gps_tty_port, sout, buf_size);
+   }
+
    // format and output nmea GPGGA sentence
    buf_size = nmea_gga(sout, sizeof(sout), &status, &location, &detail);
    if(buf_size >0) { 
