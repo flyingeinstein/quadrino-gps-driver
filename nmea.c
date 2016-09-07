@@ -114,7 +114,7 @@ int nmea_zda(char* sout, int sout_length, GPS_DETAIL* detail)
             "00,00",               // TZ hours,minutes
             broken.tm_hour, broken.tm_min, broken.tm_sec,
             detail->time %100,  // milliseconds
-            broken.tm_mday, broken.tm_mon, broken.tm_year
+            broken.tm_mday, broken.tm_mon, (int)broken.tm_year
     );
 
     // add checksum
