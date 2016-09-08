@@ -1,11 +1,14 @@
 /dts-v1/;
 /plugin/;
 
-// compile with:
+// compile with 'make dtoverlay' or use the dtc command:
 // dtc -@ -I dts -O dtb -o gps_quadrino.dtbo gps_quadrino.dts
 
 / {
-    compatible = "brcm,bcm2710brcm,bcm2709";
+    // We could restrict this DT overlay to only RPI or BBB but I see no reason
+    // the GPS can't run on any Linux device with an I2C bus.
+    // compatible = "brcm,bcm2710brcm,bcm2709";    // RaspberryPI
+    // compatible = "ti,am335x-bone-blackti,am335x-boneti,am33xx"; // BeagleBone
 
     fragment@0 {
         target = <&i2c1>;
