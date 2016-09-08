@@ -7,10 +7,10 @@ else
 	KERNEL_DIR ?= $(HOME)/src/linux
 	MODULE_INSTALL_PATH?=/lib/modules/`uname -r`/kernel/drivers/gps
 all:
-		$(MAKE) -C $(KERNEL_DIR) M=$$PWD
+	$(MAKE) -C $(KERNEL_DIR) M=$$PWD
 
 clean:
-	    rm *.o 
+	rm *.o 
 
 install:
 	mkdir -p $(MODULE_INSTALL_PATH)

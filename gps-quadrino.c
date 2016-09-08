@@ -216,16 +216,12 @@ static int quadrino_gps_probe(struct i2c_client *client,
 
    mutex_init(&gps_port.port_write_mutex);
 
-#if 1
    quadrino_gps_tty_driver = tty_alloc_driver(1,
             TTY_DRIVER_RESET_TERMIOS |
             TTY_DRIVER_REAL_RAW |
             TTY_DRIVER_UNNUMBERED_NODE);
    if (IS_ERR(quadrino_gps_tty_driver))
             return PTR_ERR(quadrino_gps_tty_driver);
-#else
-   quadrino_gps_tty_driver = alloc_tty_driver(QUADRINO_GPS_NUM);
-#endif
 
    if (!quadrino_gps_tty_driver)
        return -ENOMEM;
