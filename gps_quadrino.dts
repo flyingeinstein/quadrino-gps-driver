@@ -1,0 +1,22 @@
+/dts-v1/;
+/plugin/;
+
+// compile with:
+// dtc -@ -I dts -O dtb -o gps_quadrino.dtbo gps_quadrino.dts
+
+/ {
+    compatible = "brcm,bcm2710brcm,bcm2709";
+
+    fragment@0 {
+        target = <&i2c1>;
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            gps_quadrino: gps@20 {
+                compatible = "gps_quadrino";
+                reg = <0x20>;
+            };
+        };
+    };
+};
+
