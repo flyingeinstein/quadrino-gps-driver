@@ -38,6 +38,15 @@
 /* By default u-blox GPS fill its buffer every 1 second (1000 msecs) */
 #define READ_TIME 1000
 
+// detection of the board we are connected to
+typedef enum {
+    OTHER,
+    GPS_QUADRINO
+} GPSDeviceModel;
+
+static const struct of_device_id gps_quadrino_of_match[];   // defined at end of file
+
+
 static struct tty_port *quadrino_gps_tty_port;
 static struct i2c_client *quadrino_gps_i2c_client;
 static int quadrino_gps_is_open;
@@ -188,9 +197,22 @@ static int quadrino_gps_probe(struct i2c_client *client,
    const struct i2c_device_id *id)
 {
    int result = 0;
+   const struct of_device_id *of_id;
+   GPSDeviceModel board;
 
    printk("gps_quadrino: probing devices\n");
    quadrino_gps_i2c_client = client;
+
+   // read what Device Tree (DT) config we matched to hardware
+   // this can be used to enable/disable features based on being a QuadrinoGPS or generic MultiWii I2C GPS module
+   of_id = of_match_node(gps_quadrino_of_match, quadrino_gps_i2c_client->dev.of_node);
+   board = (GPSDeviceModel)of_id->data;
+
+   // based on the DT config we matched inform the user
+   if(board == GPS_QUADRINO)
+       printk("gps_quadrino: detected Quadrino GPS\n");
+   else
+       printk("gps_quadrino: detected generic MultiWii GPS\n");
 
    mutex_init(&gps_port.port_write_mutex);
 
@@ -266,17 +288,29 @@ static int quadrino_gps_remove(struct i2c_client *client)
    return 0;
 }
 
+
+
+// Device Tree configuration
+// This will match on the overlay fragment for gps_quadrino in the gps_quadrino.dts
+static const struct of_device_id gps_quadrino_of_match[] = {
+        { .compatible = "gps_quadrino", .data = (void*)GPS_QUADRINO },
+        { }
+};
+MODULE_DEVICE_TABLE(of, gps_quadrino_of_match);
+
+
 static const struct i2c_device_id quadrino_gps_id[] = {
-   { "gps_quadrino", 0 }, //QUADRINO_GPS_I2C_ADDRESS },
+   { "gps_quadrino", 0 }, 
    { }
 };
-
 MODULE_DEVICE_TABLE(i2c, quadrino_gps_id);
+
 
 static struct i2c_driver quadrino_gps_i2c_driver = {
    .driver = {
        .name  = "gps_quadrino",
        .owner = THIS_MODULE,
+       .of_match_table = of_match_ptr(gps_quadrino_of_match)
    },
    .id_table  = quadrino_gps_id,
    .probe     = quadrino_gps_probe,
@@ -289,3 +323,4 @@ MODULE_AUTHOR("Colin F. MacKenzie <colin@flyingeinstein.com>");
 MODULE_DESCRIPTION(DRIVER_DESC);
 MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPL");
+
