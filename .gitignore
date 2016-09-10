@@ -31,3 +31,12 @@
 # Debug files
 *.dSYM/
 *.su
+
+# kernel module ignores
+.tmp_versions
+Module.symvers
+modules.order
+*.dtbo
+*.cmd
+*.mod.c
+
