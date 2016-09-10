@@ -27,19 +27,24 @@ clean:
 
 dtoverlay-rpi: $(MODULE_NAME)-rpi.dtbo
 
-dtoverlay-bbb-i2c1: $(MODULE_NAME)-bbb-i2c1.dtbo
+dtoverlay-bbb: $(MODULE_NAME)-bbb.dtbo
 
-dtoverlay-bbb-i2c2: $(MODULE_NAME)-bbb-i2c2.dtbo
+dtoverlay: dtoverlay-$(BOARD)
 
-dtoverlay: dtoverlay-rpi dtoverlay-bbb-i2c1 dtoverlay-bbb-i2c2
-
-dtoverlay_install: dtoverlay
+dtoverlay-rpi-install: dtoverlay-rpi
 	@echo "*** Installing the overlay to $(BOOT_PATH)/overlays, you will need to edit the $(DT_CONFIG) to enable the overlay."
 	@echo "*** Typically, you would load the overlay by adding 'dtoverlay=gps_quadrino' to the config file."
 	mkdir -p $(BOOT_PATH)/overlays
-	cp $(MODULE_NAME).dtbo $(BOOT_PATH)/overlays/
+	cp $(MODULE_NAME)-rpi.dtbo $(BOOT_PATH)/overlays/
 
-install: dtoverlay_install
+dtoverlay-bbb-install: dtoverlay-bbb
+	@echo "*** Installing the overlay to /lib/firmware, you will need to edit the $(DT_CONFIG) to enable the overlay."
+	@echo "*** Typically, you would load the overlay by adding 'cape_enable=bone_capemgr.enable_partno=gps_quadrino-bbb' to the config file."
+	cp $(MODULE_NAME)-bbb.dtbo /lib/firmware/
+
+dtoverlay-install: dtoverlay-$(BOARD)-install
+
+install: dtoverlay-install
 	mkdir -p $(MODULE_INSTALL_PATH)
 	cp $(MODULE_NAME).ko $(MODULE_INSTALL_PATH)
 	depmod -a
