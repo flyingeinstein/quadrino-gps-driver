@@ -25,7 +25,13 @@ module: $(MODULE_NAME).ko
 clean:
 	rm *.o *.dtb*
 
-dtoverlay: $(MODULE_NAME).dtbo
+dtoverlay-rpi: $(MODULE_NAME)-rpi.dtbo
+
+dtoverlay-bbb-i2c1: $(MODULE_NAME)-bbb-i2c1.dtbo
+
+dtoverlay-bbb-i2c2: $(MODULE_NAME)-bbb-i2c2.dtbo
+
+dtoverlay: dtoverlay-rpi dtoverlay-bbb-i2c1 dtoverlay-bbb-i2c2
 
 dtoverlay_install: dtoverlay
 	@echo "*** Installing the overlay to $(BOOT_PATH)/overlays, you will need to edit the $(DT_CONFIG) to enable the overlay."
@@ -47,8 +53,8 @@ install_link: dtoverlay_install
 test:
 	gcc -I/usr/include -I/usr/local/include test.c -o test && ./test
 
-$(MODULE_NAME).dtbo: $(MODULE_NAME).dts
-	dtc -@ -I dts -O dtb -o $(MODULE_NAME).dtbo $(MODULE_NAME).dts
+%.dtbo : %.dts
+	dtc -@ -I dts -O dtb -o $@ $<
 
 
 endif

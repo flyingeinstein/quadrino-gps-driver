@@ -1,0 +1,25 @@
+/dts-v1/;
+/plugin/;
+
+// compile with 'make dtoverlay' or use the dtc command:
+// dtc -@ -I dts -O dtb -o gps_quadrino-bbb-i2c1.dtbo gps_quadrino-bbb-i2c1.dts
+
+/ {
+    compatible = "ti,beaglebone", "ti,beaglebone-black", "ti,beaglebone-green";
+    part-number = "gps_quadrino-bbb-i2c1";
+    version = "00A0";
+
+
+    fragment@0 {
+        target = <&i2c1>;
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            gps_quadrino: gps@20 {
+                compatible = "gps_quadrino";
+                reg = <0x20>;
+            };
+        };
+    };
+};
+
