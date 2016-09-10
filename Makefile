@@ -7,7 +7,7 @@ MODULE_NAME=gps_quadrino
 SOURCES=gps-quadrino.c nmea.c
 OBJECTS+=$(addsuffix .o,$(basename $(SOURCES)))
 UNAME:= $(shell uname -r)
-KERNEL_DIR?=$(dir $(wildcard $(HOME)/src/linux/Kconfig /usr/src/linux-headers-$(UNAME)/Kconfig))
+KERNEL_DIR?=$(dir $(wildcard $(HOME)/src/linux/Kconfig /home/$(SUDO_USER)/src/linux/Kconfig /usr/src/linux-headers-$(UNAME)/Kconfig))
 MODULE_INSTALL_PATH?=/lib/modules/`uname -r`/kernel/drivers/gps
 BOOT_PATH=$(wildcard /flash /boot)
 DT_CONFIG=$(wildcard $(BOOT_PATH)/config.txt $(BOOT_PATH)/uEnv.txt)
@@ -29,6 +29,7 @@ all: module dtoverlay
 
 info: 
 	@echo BOARD=$(BOARD)
+	@echo KERNEL_DIR=$(KERNEL_DIR)
 
 module: $(MODULE_NAME).ko
 	echo $(KERNEL_DIR)
