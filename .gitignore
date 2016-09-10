@@ -32,6 +32,7 @@
 *.dSYM/
 *.su
 .*.dwo
+*.dwo
 
 # kernel module ignores
 .tmp_versions
