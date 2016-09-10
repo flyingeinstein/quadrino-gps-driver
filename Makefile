@@ -36,7 +36,7 @@ module:
 	$(MAKE) -C $(KERNEL_DIR) M=$$PWD
 
 clean:
-	rm *.o *.dtb* .*.dwo *.dwo
+	rm *.o *.dtb* .*.dwo *.dwo .*.cmd
 
 dtoverlay-rpi: $(MODULE_NAME)-rpi.dtbo
 
