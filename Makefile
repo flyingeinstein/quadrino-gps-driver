@@ -31,7 +31,7 @@ info:
 	@echo BOARD=$(BOARD)
 	@echo KERNEL_DIR=$(KERNEL_DIR)
 
-module: $(MODULE_NAME).ko
+module: 
 	echo $(KERNEL_DIR)
 	$(MAKE) -C $(KERNEL_DIR) M=$$PWD
 
